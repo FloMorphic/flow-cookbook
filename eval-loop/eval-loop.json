@@ -1,0 +1,206 @@
+{
+  "flomorphic": {
+    "kind": "workflow",
+    "version": 1,
+    "exportedAt": "2026-08-26T19:04:50.392Z"
+  },
+  "title": "Eval Loop",
+  "nodes": [
+    {
+      "ref": "start",
+      "kind": "startNode",
+      "title": "Start",
+      "position": {
+        "x": 20,
+        "y": 193
+      }
+    },
+    {
+      "ref": "user-analyser",
+      "kind": "llm",
+      "title": "User Analyser",
+      "key": "user_request_analyse",
+      "position": {
+        "x": 781,
+        "y": 254
+      },
+      "data": {
+        "body": {
+          "messages": [
+            {
+              "content": "you are helpfull assistant",
+              "role": "system"
+            },
+            {
+              "content": "{{$.project.user_message}}\n\nproducts :\n{{$.products}}",
+              "role": "user"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "ref": "senior-evaluator",
+      "kind": "llm",
+      "title": "Senior Evaluator",
+      "key": "evaluator",
+      "position": {
+        "x": 1212,
+        "y": 120
+      },
+      "data": {
+        "body": {
+          "clear_history": true,
+          "messages": [
+            {
+              "content": "You are a senior reviewer and evaluator.\n\nYour job is to review the entire conversation history and determine whether the project's goal has been adequately addressed.\n\nRules\nReview all conversation messages and the latest answer.\nEstimate coverage of the project's goal from 0–100%.\nThe target coverage is 90% or higher.\nThe current evaluation loop count is provided by {{$.loop.count}}. Use this value to determine whether this is the first evaluation cycle.\nIf {{$.loop.count}} is 0, this is the first evaluation cycle. You MUST call continue, even if the first answer appears complete or coverage is already 90% or higher.\nWhen calling continue, ask exactly one concise clarification question that helps improve the final answer.\nIf the conversation contains fewer than 5 messages and coverage is below 90%, call continue.\nIf the conversation already contains 5 or more messages AND the main answer substantially addresses the project's goal, call answered even if some minor details are missing.\nDo not continue asking questions indefinitely. The purpose of the loop is refinement, not perfection.\nAfter 5 or more messages, prefer concluding with answered unless a critical requirement is still completely missing.\nThe final answer should represent the best available result, not necessarily a perfect result.\nDecision Logic\nFirst Evaluation Cycle\nIf {{$.loop.count}} is 0, ALWAYS call continue.\nThis rule takes priority over all coverage and message-count conditions.\nAsk exactly one concise clarification question.\nLater Evaluation Cycles\n\nIf {{$.loop.count}} is greater than 0:\n\nIf coverage >= 90%, call answered.\nElse if the conversation contains 5 or more messages AND the main goal has been substantially addressed, call answered.\nElse call continue.\nWhen Calling continue\nAsk exactly one concise clarification question.\nDo not ask multiple questions.\nThe question must directly help improve the final answer or address a missing part of the project's goal.\nWhen Calling answered\nProvide a short summary explaining why the project's goal is sufficiently addressed.\nDo not ask another clarification question.\nImportant\n\nThe value of {{$.loop.count}} is injected externally and represents the current evaluation loop iteration. Treat it as the authoritative indicator of whether this is the first evaluation cycle.",
+              "role": "system"
+            },
+            {
+              "content": "Project :\n{{$.project.goal}}\n\nMessage History :\n{{$.user_request_analyse.messages}}",
+              "role": "user"
+            }
+          ]
+        },
+        "functions": [
+          {
+            "id": "fn-mt96xe3ud9kn1j-0",
+            "name": "continue",
+            "parameters": {
+              "properties": {
+                "question": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "question"
+              ],
+              "type": "object"
+            },
+            "params": [
+              {
+                "name": "question",
+                "options": "",
+                "required": true,
+                "type": "string",
+                "description": "",
+                "id": "p-0-question"
+              }
+            ],
+            "title": "Continue Loop",
+            "description": "Coverage is below 80 percent and more clarification is needed."
+          },
+          {
+            "description": "Coverage is at least 95 percent and the requirements are sufficiently complete.",
+            "id": "fn-mt96xe3u40aknl-1",
+            "name": "answered",
+            "parameters": {
+              "properties": {
+                "summary": {
+                  "type": "string"
+                }
+              },
+              "required": [],
+              "type": "object"
+            },
+            "params": [
+              {
+                "description": "",
+                "id": "p-0-summary",
+                "name": "summary",
+                "options": "",
+                "required": false,
+                "type": "string"
+              }
+            ],
+            "title": "Answer Complete"
+          }
+        ]
+      }
+    },
+    {
+      "ref": "append-teacher-question",
+      "kind": "js",
+      "title": "Append Teacher Question",
+      "key": "messages",
+      "scope": "$.user_request_analyse",
+      "position": {
+        "x": 1576,
+        "y": 122
+      },
+      "data": {
+        "logic_rule": "let history = input.messages || []\nlet eval_func = _get(\"$.evaluator\")\nlet eval = JSON.parse(eval_func.messages[eval_func.messages.length-1].tool_calls[0]?.arguments)\nlet question = eval?.question || 'To move closer to the goal, refine one point: which option is the strongest recommendation, and what evidence makes it better than the others?'\nlet messages = [...history, { role: 'user', content: question }]\nmessages"
+      }
+    },
+    {
+      "ref": "finalize-result",
+      "kind": "js",
+      "title": "Finalize Result",
+      "position": {
+        "x": 1576,
+        "y": 265
+      },
+      "data": {
+        "logic_rule": "let evalNode = input.evaluator || {}\nlet last = evalNode.messages[evalNode.messages.length - 1]\nlet summary = JSON.parse((last.tool_calls[0] && last.tool_calls[0].arguments) || '{}')\nlet result = { status: 'answered', requirements: input.user_request_analyse, evaluation: summary }\nresult"
+      }
+    },
+    {
+      "ref": "seed-demo-product",
+      "kind": "js",
+      "title": "Seed Demo Product",
+      "position": {
+        "x": 484,
+        "y": 194
+      },
+      "data": {
+        "logic_rule": "\nlet products =  [\n    {\n      \"description\": \"13-inch laptop with Apple M4 chip, 16GB RAM and 512GB SSD.\",\n      \"id\": \"P100\",\n      \"name\": \"MacBook Air M4\",\n      \"price\": 1299\n    },\n    {\n      \"description\": \"13-inch ultrabook with Intel Core Ultra processor and OLED display.\",\n      \"id\": \"P101\",\n      \"name\": \"Dell XPS 13\",\n      \"price\": 1199\n    },\n    {\n      \"description\": \"Business laptop with Intel Core Ultra processor and enterprise security.\",\n      \"id\": \"P102\",\n      \"name\": \"Lenovo ThinkPad X1 Carbon\",\n      \"price\": 1499\n    }\n  ]\n\n\nlet project =   {\n    \"goal\": \"Create high quality buying recommendations for products\",\n    \"user_message\": \"Analyze the products and provide recommendations\"\n  }\ninput = {...{loop:{count:0},project,products,user_request_analyse:{},evaluator:{}}}\ninput"
+      }
+    },
+    {
+      "ref": "loop-counter-flag-used-by-senior",
+      "kind": "js",
+      "title": "Loop Counter Flag Used By Senior LLm ",
+      "key": "count",
+      "scope": "$.loop",
+      "position": {
+        "x": 1859,
+        "y": 135
+      },
+      "data": {
+        "logic_rule": "let count = input.count+1\n\ncount // last expression — this is what lands in `key`\n"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "from": "senior-evaluator",
+      "to": "append-teacher-question",
+      "port": "continue"
+    },
+    {
+      "from": "senior-evaluator",
+      "to": "finalize-result",
+      "port": "answered"
+    },
+    {
+      "from": "start",
+      "to": "seed-demo-product"
+    },
+    {
+      "from": "seed-demo-product",
+      "to": "user-analyser"
+    },
+    {
+      "from": "user-analyser",
+      "to": "senior-evaluator"
+    },
+    {
+      "from": "append-teacher-question",
+      "to": "loop-counter-flag-used-by-senior"
+    },
+    {
+      "from": "loop-counter-flag-used-by-senior",
+      "to": "user-analyser"
+    }
+  ]
+}
