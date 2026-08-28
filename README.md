@@ -24,6 +24,7 @@ Anything a recipe can't know about your install (a settings profile, a placehold
 | Recipe | Teaches | Level |
 | --- | --- | --- |
 | [`eval-loop/`](eval-loop/) | An LLM node that **evaluates another LLM node**: an observer/LLM-judge routing by bound function, a self-refining loop drawn as a backward edge, and `clear_history` (why a judge re-reads fresh each pass while the worker it judges must not). | Intro |
+| [`qdrant-migrate/`](qdrant-migrate/) | **Re-embed a knowledge base from one model into another** with a single upsert node: `scope` cardinality (one node, once per source point), payload fields **bound from runtime `$this` values**, a plugin reaching an external store the runtime never compiled against, and a scroll **cursor** that (with one backward edge) sweeps a whole collection. | Intro |
 | `agent-under-review/` *(soon)* | The same idea, scaled up: a tool-using **worker agent** judged by a **panel** of three evaluators in parallel, a deterministic aggregator that routes on the combined score, **human escalation** (park/resume) on non-convergence, and a refinement **budget**. | Intermediate |
 
 More land over time. Each folder is self-contained — read its README for the topology, the mechanic it turns on, and what to fill in after import.
