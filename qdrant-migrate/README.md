@@ -45,6 +45,8 @@ The spine that runs and does the work is **Create collection → Upsert points**
 
 - **`$.result.result[*]` is the input contract.** The cardinal node reads its source array from `$.result.result[*]` — the points to migrate. In this export that array is supplied to the flow as its starting Context (e.g. the result of a prior scroll/search you paste in or pipe from an upstream node). Give the flow a Context whose `$.result.result` is an array of `{ payload: { text, component, ... } }` objects and each becomes one written point.
 
+> **Cardinality vs. the topology loop.** The runtime's first-class way to iterate is the **topology loop** — a real backward edge over the durable Context, with a counter and a stop condition (the scroll pump below *is* one). A many-valued `scope` doesn't replace it; it's the shortcut for the narrower case where you apply the *same transform to every element independently* — no shared state, no stop condition, no branch. This migration is exactly that case, so the array scope collapses the per-document loop to one node. Reach for the topology loop when the passes depend on each other; reach for cardinality when they don't.
+
 ### The expansion: a cursor and a backward edge
 
 The interesting property of `qdrant.points.scroll` is that it hands back a **`next_page_offset`** — a cursor into the collection. **Scroll points** feeds that cursor straight back into its own request:
