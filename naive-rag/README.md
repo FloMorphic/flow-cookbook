@@ -40,7 +40,7 @@ See [`sample-run.json`](sample-run.json) for a sanitized snapshot of the Context
 
 Why "naive": one shot, one query, top-k by score, stuff it in the prompt. No query rewriting, no reranking, no multi-hop, no citations back-checked. It's the honest baseline — and the point of the recipe is how little runtime it takes to stand up. Everything past naive (a rerank node, a rewrite step, a judged answer) is *more nodes and edges* on the same Context, not a different kind of system.
 
-> **Why the Qdrant plugin here, not the built-in store?** FloMorphic ships its own internal vector store (finalized in **v0.3.6**), and for a new knowledge base that's the shorter path — no external service to run. This recipe reaches for the **Qdrant plugin** only because its sample collection (`chat_kb_demo`) already lives in Qdrant from an earlier project. The shape of the flow is identical either way: retrieval is one node whose output lands in Context, and the LLM reads it through a template. Point node one at the internal store instead and nothing downstream changes.
+> **Why the Qdrant plugin here, not the built-in store?** FloMorphic ships its own **built-in vector-store node type**, and for a new knowledge base that's the shorter path — no external service to run. This recipe reaches for the **Qdrant plugin** only because its sample collection (`chat_kb_demo`) already lives in Qdrant from an earlier project. The shape of the flow is identical either way: retrieval is one node whose output lands in Context, and the LLM reads it through a template. Point node one at the internal store instead and nothing downstream changes.
 
 ---
 
