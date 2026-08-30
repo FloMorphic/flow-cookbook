@@ -1,0 +1,232 @@
+{
+  "flomorphic": {
+    "kind": "workflow",
+    "version": 1,
+    "exportedAt": "2026-08-30T21:42:59.187Z"
+  },
+  "title": "Naive-Rag-Sample",
+  "nodes": [
+    {
+      "ref": "start",
+      "kind": "startNode",
+      "title": "Start",
+      "position": {
+        "x": 436,
+        "y": 247
+      }
+    },
+    {
+      "ref": "vector-search",
+      "kind": "plugin",
+      "title": "Vector search",
+      "key": "qd_result",
+      "position": {
+        "x": 697,
+        "y": 73
+      },
+      "data": {
+        "action": "qdrant.points.search",
+        "body": {
+          "limit": 10,
+          "scoreThreshold": 0.7,
+          "text": "ai assistant in decision make and assessment",
+          "withPayload": true,
+          "withVector": false,
+          "collection": "chat_kb_demo"
+        },
+        "settingsId": "nset_mtgb9nl033603ki0",
+        "form": {
+          "ui": {
+            "elements": [
+              {
+                "scope": "#/properties/collection",
+                "type": "Control",
+                "x-inflow-notif": {
+                  "message": "Name of the Qdrant collection to act on. Accepts {{$.path}} tokens.",
+                  "severity": "help"
+                },
+                "x-inflow-ui": {
+                  "button": {
+                    "icon": "↻",
+                    "label": "List",
+                    "position": "append"
+                  },
+                  "action": {
+                    "body": {
+                      "form": "qdrant.points.search",
+                      "targetField": "collection"
+                    },
+                    "fn": "qdrant.meta.collections",
+                    "name": "pluginFn"
+                  }
+                }
+              },
+              {
+                "type": "Control",
+                "x-inflow-notif": {
+                  "severity": "help",
+                  "message": "Embedded with the configured provider and searched. Leave blank to search by a raw vector instead. Accepts {{$.path}} tokens."
+                },
+                "scope": "#/properties/text"
+              },
+              {
+                "scope": "#/properties/vector",
+                "type": "Control",
+                "x-inflow-notif": {
+                  "message": "Array of numbers, e.g. [0.1, 0.2, 0.3]. Used only when Query text is blank. Accepts {{$.path}} tokens.",
+                  "severity": "help"
+                },
+                "options": {
+                  "multi": true
+                }
+              },
+              {
+                "scope": "#/properties/filters",
+                "type": "Control",
+                "x-inflow-notif": {
+                  "message": "Each row narrows results to points whose payload key equals the value (Qdrant must-match), e.g. tag → a. Keys and values accept {{$.path}} tokens; 42 or true match a number/boolean — quote it (\"42\") to match a string.",
+                  "severity": "help"
+                }
+              },
+              {
+                "scope": "#/properties/limit",
+                "type": "Control"
+              },
+              {
+                "options": {
+                  "multi": true
+                },
+                "scope": "#/properties/filter",
+                "type": "Control",
+                "x-inflow-notif": {
+                  "message": "Raw Qdrant filter merged with the rows above, e.g. {\"must\":[{\"key\":\"tag\",\"match\":{\"value\":\"a\"}}]}. Accepts {{$.path}} tokens.",
+                  "severity": "help"
+                }
+              },
+              {
+                "scope": "#/properties/scoreThreshold",
+                "type": "Control",
+                "x-inflow-notif": {
+                  "message": "Only return points scoring at or above this value.",
+                  "severity": "help"
+                }
+              },
+              {
+                "scope": "#/properties/withPayload",
+                "type": "Control"
+              },
+              {
+                "scope": "#/properties/withVector",
+                "type": "Control"
+              }
+            ],
+            "type": "VerticalLayout"
+          },
+          "schema": {
+            "description": "Search by text (embedded with the configured provider) or by a raw query vector, optionally narrowed by payload filters. Provide exactly one of text/vector.",
+            "properties": {
+              "withVector": {
+                "default": false,
+                "title": "Include vector",
+                "type": "boolean"
+              },
+              "collection": {
+                "title": "Collection",
+                "type": "string"
+              },
+              "limit": {
+                "minimum": 1,
+                "title": "Limit",
+                "type": "integer",
+                "default": 10
+              },
+              "scoreThreshold": {
+                "title": "Score threshold (optional)",
+                "type": "number"
+              },
+              "vector": {
+                "title": "Query vector (JSON array)",
+                "type": "string"
+              },
+              "filter": {
+                "title": "Filter (JSON object, advanced)",
+                "type": "string"
+              },
+              "filters": {
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "title": "Key",
+                      "type": "string"
+                    },
+                    "value": {
+                      "type": "string",
+                      "title": "Value"
+                    }
+                  },
+                  "required": [
+                    "key"
+                  ]
+                },
+                "title": "Payload filters (key/value)",
+                "type": "array"
+              },
+              "text": {
+                "title": "Query text",
+                "type": "string"
+              },
+              "withPayload": {
+                "default": true,
+                "title": "Include payload",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "collection"
+            ],
+            "title": "Vector search",
+            "type": "object"
+          }
+        },
+        "icon": "mdi-vector-triangle"
+      }
+    },
+    {
+      "ref": "llm",
+      "kind": "llm",
+      "title": "LLM",
+      "key": "assistant",
+      "position": {
+        "x": 979,
+        "y": 332
+      },
+      "data": {
+        "body": {
+          "messages": [
+            {
+              "content": "You are a helpful AI assistant.\n\nYour task is to answer the user's question using the retrieved information provided below.\n\nInstructions:\n- Use the retrieved data as the primary source of truth.\n- Answer the user's question directly and clearly.\n- If the retrieved data does not contain enough information, say so.\n- Do not invent facts that are not supported by the retrieved data.\n- When relevant, cite or reference specific parts of the retrieved data.\n- Keep the answer concise but complete.\n\nRetrieved Data:\n{{$.qd_result.result[*].payload.text}}",
+              "role": "system"
+            },
+            {
+              "content": "User Question:\nai assistant in decision make and assessment\n\n answer the question using the retrieved data provided in the system context.",
+              "role": "user"
+            }
+          ],
+          "clear_history": true
+        },
+        "settingsId": "nset_ms0totsvaaj3yigk"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "from": "start",
+      "to": "vector-search"
+    },
+    {
+      "from": "vector-search",
+      "to": "llm"
+    }
+  ]
+}

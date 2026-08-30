@@ -1,0 +1,78 @@
+{
+  "_note": "Sanitized sample of the Context after one run. Internal ids, tenant/subject codes, and long chunk text have been replaced or truncated. Scores and structure are real.",
+  "assistant": {
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are a helpful AI assistant.\n\nYour task is to answer the user's question using the retrieved information provided below.\n\nInstructions:\n- Use the retrieved data as the primary source of truth.\n- Answer the user's question directly and clearly.\n- If the retrieved data does not contain enough information, say so.\n- Do not invent facts that are not supported by the retrieved data.\n- Keep the answer concise but complete.\n\nRetrieved Data:\n## 8- AI Assessment\nThe AI Assessment section introduces intelligence-powered analysis by: auto-generating improvement suggestions, mapping evidence to maturity gaps, and prioritizing actions based on domain risk.\nSteps to use: click \"Generate AI Assessment\", select a domain or document set, review the AI-recommended insights and suggested maturity levels.\n… (retrieved text truncated for the sample)"
+      },
+      {
+        "role": "user",
+        "content": "User Question:\nai assistant in decision make and assessment\n\n answer the question using the retrieved data provided in the system context."
+      },
+      {
+        "role": "assistant",
+        "content": "Based on the provided data, the AI Assessment tool acts as an intelligence-powered assistant that supports both assessment and decision-making:\n\n- Auto-generates improvement suggestions.\n- Maps evidence to maturity gaps.\n- Prioritizes actions based on domain risk.\n- Provides AI-recommended insights and suggested maturity levels, boosting accuracy while reducing manual workload.\n\nSteps: click \"Generate AI Assessment\", select the relevant domain or document set, then review the insights and suggested maturity levels.\n\n(Source: Section 8 - AI Assessment & Best Practices)"
+      }
+    ],
+    "resumed": false
+  },
+  "qd_result": {
+    "result": [
+      {
+        "id": "…3271e8",
+        "score": 0.7190838,
+        "version": 3,
+        "payload": {
+          "bucket": "know-base",
+          "cat": "chat",
+          "component": "chat",
+          "docs": "help",
+          "subject": "kb_help",
+          "jobId": "job_demo_0001",
+          "source": "job_demo_0001/Assessment Module.md",
+          "chunkId": 2,
+          "cost": 0.00394,
+          "tokens_used": 394,
+          "text": "Figure 5 - Plan Execution … d. Maturity Analysis (post-execution improvement, domain response, trend comparisons) … e. Progress Monitoring (completed strategies, delayed vs on-time, performance indicators) … ## 8- AI Assessment: auto-generates suggestions, maps evidence to gaps, prioritizes by domain risk … Best Practices: start with Maturity, use Strategy Planning, keep Plan Execution updated, compare with Maturity Analysis, monitor with Progress Monitoring, leverage AI Assessment. … (truncated)"
+        }
+      },
+      {
+        "id": "…059195",
+        "score": 0.71046066,
+        "version": 1,
+        "payload": {
+          "bucket": "know-base",
+          "cat": "chat",
+          "component": "chat",
+          "docs": "help",
+          "subject": "kb_help",
+          "jobId": "job_demo_0001",
+          "source": "job_demo_0001/Assessment Module.md",
+          "chunkId": 0,
+          "cost": 0.00831,
+          "tokens_used": 831,
+          "text": "# 4 – Assessment Module … 4-1 Overview: structured interface for evaluating organizational maturity, planning improvements, executing actions, monitoring progress (Maturity / Improvement / AI Assessment) … 5 Overview Pages Module: centralized view of assessment outcomes, control evaluations, remediation, compliance gaps, improvement plans … tabs: Overview, Priorities, Control Ratings, Remediations Status, Maturity Posture, Compliance Analysis, Benchmark … 6 Assessment Module: evaluate practices against frameworks, 4-level scale (Initial, Assignment, Assessment, Finalise). … (truncated)"
+        }
+      },
+      {
+        "id": "…521c35",
+        "score": 0.7099508,
+        "version": 2,
+        "payload": {
+          "bucket": "know-base",
+          "cat": "chat",
+          "component": "chat",
+          "docs": "help",
+          "subject": "kb_help",
+          "jobId": "job_demo_0001",
+          "source": "job_demo_0001/Assessment Module.md",
+          "chunkId": 1,
+          "cost": 0.00877,
+          "tokens_used": 877,
+          "text": "4-level scale (Initial, Assignment, Assessment, Finalise) … 6-2 Key Functional Sections: framework/domain selection, four assessment phases … 6-3 kanban layout (To Do, In Progress, Done, Approved) … per-control: maturity level, justification, evidence upload; AI suggestions shown for comparison … domain finalization locks edits … 7 Improvement: Overview, Strategy Planning, Plan Execution, Maturity Analysis, Progress Monitoring. … (truncated)"
+        }
+      }
+    ]
+  }
+}
