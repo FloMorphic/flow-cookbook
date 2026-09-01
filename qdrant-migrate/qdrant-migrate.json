@@ -5,6 +5,16 @@
     "exportedAt": "2026-08-29T00:39:26.405Z"
   },
   "title": "Retriever_with_Qdrant",
+  "plugins": [
+    {
+      "name": "Qdrant",
+      "actions": [
+        "qdrant.collection.create",
+        "qdrant.points.scroll",
+        "qdrant.points.upsert"
+      ]
+    }
+  ],
   "nodes": [
     {
       "ref": "start",
@@ -25,77 +35,6 @@
         "y": 139
       },
       "data": {
-        "form": {
-          "schema": {
-            "type": "object",
-            "properties": {
-              "collection": {
-                "title": "Collection name",
-                "type": "string"
-              },
-              "distance": {
-                "default": "Cosine",
-                "enum": [
-                  "Cosine",
-                  "Dot",
-                  "Euclid",
-                  "Manhattan"
-                ],
-                "title": "Distance",
-                "type": "string"
-              },
-              "onDiskPayload": {
-                "default": false,
-                "title": "Store payload on disk",
-                "type": "boolean"
-              },
-              "size": {
-                "minimum": 1,
-                "title": "Vector size",
-                "type": "integer"
-              }
-            },
-            "required": [
-              "collection",
-              "size",
-              "distance"
-            ],
-            "title": "Create collection"
-          },
-          "ui": {
-            "elements": [
-              {
-                "scope": "#/properties/collection",
-                "type": "Control",
-                "x-inflow-notif": {
-                  "message": "Accepts {{$.path}} tokens.",
-                  "severity": "help"
-                }
-              },
-              {
-                "scope": "#/properties/size",
-                "type": "Control",
-                "x-inflow-notif": {
-                  "message": "Dimensionality of the vectors this collection stores.",
-                  "severity": "help"
-                }
-              },
-              {
-                "scope": "#/properties/distance",
-                "type": "Control"
-              },
-              {
-                "x-inflow-notif": {
-                  "message": "Keep payloads on disk instead of RAM (larger, cheaper collections).",
-                  "severity": "help"
-                },
-                "scope": "#/properties/onDiskPayload",
-                "type": "Control"
-              }
-            ],
-            "type": "VerticalLayout"
-          }
-        },
         "action": "qdrant.collection.create",
         "icon": "mdi-database-plus",
         "body": {
@@ -133,157 +72,6 @@
             }
           ],
           "text": "{{$this.payload.text}}"
-        },
-        "form": {
-          "schema": {
-            "description": "Insert one point from a text (embedded with the configured provider) plus payload tags, or paste a Points JSON array below to write a batch. Tag values accept {{$.path}} tokens resolved from the flow.",
-            "properties": {
-              "points": {
-                "title": "Points (JSON array)",
-                "type": "string"
-              },
-              "tags": {
-                "items": {
-                  "required": [
-                    "key"
-                  ],
-                  "type": "object",
-                  "properties": {
-                    "key": {
-                      "title": "Key",
-                      "type": "string"
-                    },
-                    "value": {
-                      "title": "Value",
-                      "type": "string"
-                    }
-                  }
-                },
-                "title": "Payload tags (key/value)",
-                "type": "array"
-              },
-              "text": {
-                "type": "string",
-                "title": "Text to embed"
-              },
-              "vector": {
-                "title": "Vector (JSON array, optional)",
-                "type": "string"
-              },
-              "wait": {
-                "default": true,
-                "title": "Wait for completion",
-                "type": "boolean"
-              },
-              "collection": {
-                "title": "Collection",
-                "type": "string"
-              },
-              "id": {
-                "title": "Point ID (optional)",
-                "type": "string"
-              }
-            },
-            "required": [
-              "collection"
-            ],
-            "title": "Upsert points",
-            "type": "object"
-          },
-          "ui": {
-            "type": "VerticalLayout",
-            "elements": [
-              {
-                "scope": "#/properties/collection",
-                "type": "Control",
-                "x-inflow-notif": {
-                  "message": "Name of the Qdrant collection to act on. Accepts {{$.path}} tokens.",
-                  "severity": "help"
-                },
-                "x-inflow-ui": {
-                  "action": {
-                    "body": {
-                      "form": "qdrant.points.upsert",
-                      "targetField": "collection"
-                    },
-                    "fn": "qdrant.meta.collections",
-                    "name": "pluginFn"
-                  },
-                  "button": {
-                    "icon": "↻",
-                    "label": "List",
-                    "position": "append"
-                  }
-                }
-              },
-              {
-                "elements": [
-                  {
-                    "scope": "#/properties/text",
-                    "type": "Control",
-                    "x-inflow-notif": {
-                      "message": "Embedded with the configured provider and stored under payload.text so search results carry the source. Accepts {{$.path}} tokens. Leave blank to supply a raw vector instead.",
-                      "severity": "help"
-                    }
-                  },
-                  {
-                    "scope": "#/properties/tags",
-                    "type": "Control",
-                    "x-inflow-notif": {
-                      "message": "Stored on the point's payload, e.g. sku → B1, tag → a. Filter on these later in Vector search. Keys and values accept {{$.path}} tokens; a value like 42 or true is stored as a number/boolean — quote it (\"42\") to force a string.",
-                      "severity": "help"
-                    }
-                  },
-                  {
-                    "type": "Control",
-                    "x-inflow-notif": {
-                      "message": "Number or UUID string. A UUID is generated when left blank. Accepts {{$.path}} tokens.",
-                      "severity": "help"
-                    },
-                    "scope": "#/properties/id"
-                  },
-                  {
-                    "options": {
-                      "multi": true
-                    },
-                    "scope": "#/properties/vector",
-                    "type": "Control",
-                    "x-inflow-notif": {
-                      "severity": "help",
-                      "message": "Give an explicit vector instead of Text to embed, e.g. [0.1, 0.2, 0.3]. Accepts {{$.path}} tokens."
-                    }
-                  }
-                ],
-                "label": "Point",
-                "type": "Group"
-              },
-              {
-                "label": "Batch (advanced)",
-                "type": "Group",
-                "elements": [
-                  {
-                    "x-inflow-notif": {
-                      "message": "Overrides the single point above. With an embedding provider: [{\"text\":\"a red bicycle\",\"payload\":{\"sku\":\"B1\"}}]. Without one, or to bypass embedding: [{\"id\":1,\"vector\":[0.1,0.2],\"payload\":{\"tag\":\"a\"}}]. Accepts {{$.path}} tokens.",
-                      "severity": "help"
-                    },
-                    "options": {
-                      "multi": true
-                    },
-                    "scope": "#/properties/points",
-                    "type": "Control"
-                  },
-                  {
-                    "type": "Control",
-                    "x-inflow-notif": {
-                      "message": "Return only once the write is applied.",
-                      "severity": "help"
-                    },
-                    "scope": "#/properties/wait"
-                  }
-                ]
-              }
-            ]
-          }
         }
       }
     },
@@ -304,108 +92,6 @@
           "withVector": false,
           "collection": "chat_kb_demo",
           "offset": "{{$.source_stage.result.next_page_offset}}"
-        },
-        "form": {
-          "schema": {
-            "description": "Page through points by filter, without a query vector.",
-            "properties": {
-              "filter": {
-                "title": "Filter (JSON object, optional)",
-                "type": "string"
-              },
-              "limit": {
-                "default": 50,
-                "minimum": 1,
-                "title": "Limit",
-                "type": "integer"
-              },
-              "offset": {
-                "title": "Offset (optional)",
-                "type": "string"
-              },
-              "withPayload": {
-                "default": true,
-                "title": "Include payload",
-                "type": "boolean"
-              },
-              "withVector": {
-                "default": false,
-                "title": "Include vector",
-                "type": "boolean"
-              },
-              "collection": {
-                "title": "Collection",
-                "type": "string"
-              }
-            },
-            "required": [
-              "collection"
-            ],
-            "title": "Scroll points",
-            "type": "object"
-          },
-          "ui": {
-            "elements": [
-              {
-                "scope": "#/properties/collection",
-                "type": "Control",
-                "x-inflow-notif": {
-                  "message": "Name of the Qdrant collection to act on.",
-                  "severity": "help"
-                },
-                "x-inflow-ui": {
-                  "button": {
-                    "label": "List",
-                    "position": "append",
-                    "icon": "↻"
-                  },
-                  "action": {
-                    "fn": "qdrant.meta.collections",
-                    "name": "pluginFn",
-                    "body": {
-                      "form": "qdrant.points.scroll",
-                      "targetField": "collection"
-                    }
-                  }
-                }
-              },
-              {
-                "scope": "#/properties/limit",
-                "type": "Control"
-              },
-              {
-                "options": {
-                  "multi": true
-                },
-                "scope": "#/properties/filter",
-                "type": "Control",
-                "x-inflow-notif": {
-                  "message": "e.g. {\"must\":[{\"key\":\"tag\",\"match\":{\"value\":\"a\"}}]}",
-                  "severity": "help"
-                }
-              },
-              {
-                "options": {
-                  "multi": true
-                },
-                "scope": "#/properties/offset",
-                "type": "Control",
-                "x-inflow-notif": {
-                  "message": "The next_page_offset from a previous scroll, as JSON (a number, string, or id).",
-                  "severity": "help"
-                }
-              },
-              {
-                "scope": "#/properties/withPayload",
-                "type": "Control"
-              },
-              {
-                "scope": "#/properties/withVector",
-                "type": "Control"
-              }
-            ],
-            "type": "VerticalLayout"
-          }
         },
         "icon": "mdi-format-list-bulleted"
       }
