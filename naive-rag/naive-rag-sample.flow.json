@@ -10,7 +10,9 @@
       "name": "Qdrant",
       "actions": [
         "qdrant.points.search"
-      ]
+      ],
+      "repo": "https://github.com/Inflowenger/qdrant-plugin"
+
     }
   ],
   "nodes": [

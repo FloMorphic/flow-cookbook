@@ -12,7 +12,9 @@
         "qdrant.collection.create",
         "qdrant.points.scroll",
         "qdrant.points.upsert"
-      ]
+      ],
+      "repo": "https://github.com/Inflowenger/qdrant-plugin"
+
     }
   ],
   "nodes": [
