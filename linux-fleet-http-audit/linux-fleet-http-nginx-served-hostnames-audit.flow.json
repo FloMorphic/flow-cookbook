@@ -1,0 +1,363 @@
+{
+  "flomorphic": {
+    "kind": "workflow",
+    "version": 1,
+    "exportedAt": "2026-09-19T00:49:56.471Z"
+  },
+  "title": "Linux fleet — HTTP / nginx + served hostnames audit",
+  "plugins": [
+    {
+      "name": "venapce",
+      "actions": [
+        "db.stages.upsert",
+        "osquery.query",
+        "osquery.queryByTags"
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "ref": "start-linux-http-nginx-audit",
+      "kind": "startNode",
+      "title": "Start — Linux HTTP/nginx audit",
+      "position": {
+        "x": 120,
+        "y": 406
+      }
+    },
+    {
+      "ref": "fleet-tcp-listeners-owning-proce",
+      "kind": "plugin",
+      "title": "Fleet: TCP listeners + owning process",
+      "key": "listeners",
+      "position": {
+        "x": 484,
+        "y": 263
+      },
+      "data": {
+        "action": "osquery.queryByTags",
+        "body": {
+          "env": "default",
+          "sql": "SELECT s.hostname AS node_hostname, s.uuid AS node_uuid, l.port AS port, l.address AS address, l.protocol AS protocol, p.pid AS pid, p.name AS process_name, p.path AS process_path, p.cmdline AS cmdline FROM system_info s, listening_ports l, processes p WHERE l.pid = p.pid AND l.protocol = 6 AND l.port > 0",
+          "tags": [
+            "default",
+            "linuxmint"
+          ]
+        }
+      }
+    },
+    {
+      "ref": "fleet-web-server-processes-on-ho",
+      "kind": "plugin",
+      "title": "Fleet: web-server processes on host",
+      "key": "web_processes",
+      "position": {
+        "x": 484,
+        "y": 406
+      },
+      "data": {
+        "action": "osquery.queryByTags",
+        "body": {
+          "env": "default",
+          "sql": "SELECT s.hostname AS node_hostname, s.uuid AS node_uuid, p.pid AS pid, p.name AS process_name, p.path AS process_path, p.cmdline AS cmdline, p.start_time AS start_time FROM system_info s, processes p WHERE p.name LIKE '%nginx%' OR p.path LIKE '%nginx%' OR p.cmdline LIKE '%nginx%' OR p.name LIKE '%apache%' OR p.name LIKE '%httpd%' OR p.name LIKE '%caddy%' OR p.name LIKE '%lighttpd%' OR p.name LIKE '%traefik%' OR p.name LIKE '%haproxy%' OR p.name LIKE '%envoy%' OR p.name LIKE '%gunicorn%' OR p.name LIKE '%uvicorn%' OR p.name LIKE '%tomcat%'",
+          "tags": [
+            "default",
+            "linuxmint"
+          ]
+        }
+      }
+    },
+    {
+      "ref": "fleet-docker-containers-publishe",
+      "kind": "plugin",
+      "title": "Fleet: docker containers + published ports",
+      "key": "docker_web",
+      "position": {
+        "x": 484,
+        "y": 549
+      },
+      "data": {
+        "action": "osquery.queryByTags",
+        "body": {
+          "env": "default",
+          "sql": "SELECT s.hostname AS node_hostname, s.uuid AS node_uuid, c.id AS container_id, c.name AS container_name, c.image AS image, c.state AS state, c.status AS status, pt.port AS container_port, pt.host_port AS host_port, pt.host_ip AS host_ip, pt.type AS port_type FROM system_info s, docker_containers c LEFT JOIN docker_container_ports pt ON pt.id = c.id",
+          "tags": [
+            "default",
+            "linuxmint"
+          ]
+        }
+      }
+    },
+    {
+      "ref": "wait-for-all-three-sweeps",
+      "kind": "promissall",
+      "title": "Wait for all three sweeps",
+      "position": {
+        "x": 848,
+        "y": 406
+      }
+    },
+    {
+      "ref": "build-per-node-inventory",
+      "kind": "js",
+      "title": "Build per-node inventory",
+      "key": "inventory",
+      "position": {
+        "x": 1212,
+        "y": 406
+      },
+      "data": {
+        "logic_rule": "let ctx = input;\nlet rowsOf = function (res) {\n  let out = [];\n  let visit = function (v, node) {\n    if (v === null || v === undefined) { return; }\n    if (Array.isArray(v)) { for (let i = 0; i < v.length; i++) { visit(v[i], node); } return; }\n    if (typeof v !== 'object') { return; }\n    let n = v.uuid || v.node_uuid || node;\n    if (v.data && typeof v.data === 'object' && Array.isArray(v.data.result)) { visit(v.data.result, n); return; }\n    if (Array.isArray(v.result)) { visit(v.result, n); return; }\n    if (Array.isArray(v.rows)) { visit(v.rows, n); return; }\n    if (Array.isArray(v.results)) { visit(v.results, n); return; }\n    if (Array.isArray(v.items)) { visit(v.items, n); return; }\n    let copy = {};\n    for (let k in v) { copy[k] = v[k]; }\n    if (n && !copy.node_uuid) { copy.node_uuid = n; }\n    out.push(copy);\n  };\n  visit(res, '');\n  return out;\n};\nlet listeners = rowsOf(ctx.listeners);\nlet webproc = rowsOf(ctx.web_processes);\nlet dockerRows = rowsOf(ctx.docker_web);\nlet httpPorts = [80, 443, 3000, 5000, 8000, 8008, 8080, 8081, 8088, 8443, 8888, 9000, 9090];\nlet isHttpPort = function (p) { let hit = false; for (let i = 0; i < httpPorts.length; i++) { if (p === httpPorts[i]) { hit = true; } } return hit; };\nlet webNames = ['nginx', 'httpd', 'apache', 'caddy', 'lighttpd', 'traefik', 'haproxy', 'envoy', 'gunicorn', 'uvicorn', 'puma', 'tomcat'];\nlet namedWeb = function (h) { let hit = false; for (let i = 0; i < webNames.length; i++) { if (h.indexOf(webNames[i]) >= 0) { hit = true; } } return hit; };\nlet hay = function (r) { return (((r.process_name || '') + ' ' + (r.process_path || '') + ' ' + (r.cmdline || '')) + '').toLowerCase(); };\nlet cut = function (s) { let v = (s === null || s === undefined) ? '' : ('' + s); return v.length > 200 ? v.slice(0, 200) : v; };\nlet nodes = {};\nlet getNode = function (r) {\n  let k = ((r.node_uuid || r.uuid || r.node_hostname || r.hostname || 'unknown') + '').toLowerCase();\n  if (!nodes[k]) { nodes[k] = { key: k, uuid: '', hostname: '', http_servers: [], nginx_host: [], nginx_docker: [], docker_web: [], other_web_processes: [] }; }\n  let n = nodes[k];\n  if (!n.uuid && (r.node_uuid || r.uuid)) { n.uuid = ((r.node_uuid || r.uuid) + '').toUpperCase(); }\n  if (!n.hostname && (r.node_hostname || r.hostname)) { n.hostname = (r.node_hostname || r.hostname) + ''; }\n  return n;\n};\nlet publishedHttp = {};\nfor (let i = 0; i < dockerRows.length; i++) {\n  let r = dockerRows[i];\n  let hp = parseInt(r.host_port, 10);\n  let cp = parseInt(r.container_port, 10);\n  if (!hp) { continue; }\n  if (isHttpPort(cp) || isHttpPort(hp)) { publishedHttp[hp + ''] = (r.container_name || '') + ' [' + (r.image || '') + ']'; }\n}\nfor (let i = 0; i < listeners.length; i++) {\n  let r = listeners[i];\n  let n = getNode(r);\n  let p = parseInt(r.port, 10);\n  let h = hay(r);\n  let viaDocker = publishedHttp[p + ''] || '';\n  let entry = { port: p, address: r.address || '', pid: r.pid, process: r.process_name || '', path: r.process_path || '', cmdline: cut(r.cmdline), source: 'host_listener', container: viaDocker, likely_http: namedWeb(h) || isHttpPort(p) || viaDocker !== '' };\n  n.http_servers.push(entry);\n  if (h.indexOf('nginx') >= 0) { n.nginx_host.push({ pid: r.pid, port: p, address: r.address || '', process: r.process_name || '', path: r.process_path || '' }); }\n}\nfor (let i = 0; i < webproc.length; i++) {\n  let r = webproc[i];\n  let n = getNode(r);\n  let h = hay(r);\n  let rec = { pid: r.pid, process: r.process_name || '', path: r.process_path || '', cmdline: cut(r.cmdline), start_time: r.start_time };\n  if (h.indexOf('nginx') >= 0) { n.nginx_host.push(rec); } else { n.other_web_processes.push(rec); }\n}\nfor (let i = 0; i < dockerRows.length; i++) {\n  let r = dockerRows[i];\n  let n = getNode(r);\n  let rec = { container: r.container_name || '', image: r.image || '', state: r.state || '', status: r.status || '', container_port: r.container_port, host_port: r.host_port, host_ip: r.host_ip };\n  let sig = ((rec.image + ' ' + rec.container) + '').toLowerCase();\n  let web = namedWeb(sig) || isHttpPort(parseInt(r.host_port, 10)) || isHttpPort(parseInt(r.container_port, 10));\n  if (web) { n.docker_web.push(rec); }\n  if (sig.indexOf('nginx') >= 0) { n.nginx_docker.push(rec); }\n}\nlet trim = function (arr, max) { let out = []; for (let i = 0; i < arr.length && i < max; i++) { out.push(arr[i]); } return out; };\nlet list = [];\nlet targets = [];\nfor (let k in nodes) {\n  let n = nodes[k];\n  let httpish = [];\n  let tlsPort = 0;\n  let firstPort = 0;\n  for (let i = 0; i < n.http_servers.length; i++) {\n    let e = n.http_servers[i];\n    if (!e.likely_http) { continue; }\n    httpish.push(e);\n    if (!firstPort) { firstPort = e.port; }\n    if (e.port === 443 || e.port === 8443) { tlsPort = e.port; }\n  }\n  n.likely_http_servers = httpish;\n  n.nginx_host_count = n.nginx_host.length;\n  n.nginx_host = trim(n.nginx_host, 8);\n  n.other_web_process_count = n.other_web_processes.length;\n  n.other_web_processes = trim(n.other_web_processes, 8);\n  n.has_nginx = (n.nginx_host_count + n.nginx_docker.length) > 0;\n  n.nginx_where = n.nginx_host_count > 0 && n.nginx_docker.length > 0 ? 'host+docker' : (n.nginx_host_count > 0 ? 'host' : (n.nginx_docker.length > 0 ? 'docker' : 'none'));\n  n.has_http = httpish.length > 0 || n.docker_web.length > 0 || n.other_web_process_count > 0 || n.has_nginx;\n  list.push(n);\n  if (n.has_http) { targets.push({ uuid: n.uuid, hostname: n.hostname, node_key: n.key, nginx_where: n.nginx_where, tls_target: '127.0.0.1:' + (tlsPort || 443), http_target: 'http://127.0.0.1:' + (firstPort || 80) }); }\n}\nlet inventory = { nodes: list, http_targets: targets, counts: { nodes: list.length, with_http: targets.length } };\ninventory\n"
+      }
+    },
+    {
+      "ref": "any-node-serving-http",
+      "kind": "rule",
+      "title": "Any node serving HTTP?",
+      "position": {
+        "x": 1576,
+        "y": 376
+      },
+      "data": {
+        "handlers": [
+          {
+            "id": "h_with",
+            "name": "with_http",
+            "tags": [
+              "with_http"
+            ],
+            "title": "HTTP servers found"
+          },
+          {
+            "id": "h_none",
+            "name": "no_http",
+            "tags": [
+              "no_http"
+            ],
+            "title": "Nothing serving HTTP"
+          }
+        ],
+        "logic_rule": "let inv = input.inventory || { http_targets: [] };\nlet targets = inv.http_targets || [];\nlet decision = targets.length > 0 ? 'with_http' : 'no_http';\ndecision\n"
+      }
+    },
+    {
+      "ref": "per-node-nginx-config-files-dock",
+      "kind": "plugin",
+      "title": "Per node: nginx config files + docker labels/env",
+      "key": "nginx_conf",
+      "scope": "$.inventory.http_targets[*]",
+      "position": {
+        "x": 1940,
+        "y": 120
+      },
+      "data": {
+        "action": "osquery.query",
+        "body": {
+          "env": "default",
+          "sql": "SELECT s.hostname AS node_hostname, 'file' AS source, f.path AS ref, 'config_file' AS label, f.path AS value FROM system_info s, file f WHERE f.path LIKE '/etc/nginx/%%' OR f.path LIKE '/etc/apache2/sites-enabled/%%' OR f.path LIKE '/etc/httpd/conf.d/%%' OR f.path LIKE '/etc/caddy/%%' UNION ALL SELECT s.hostname, 'docker_label', l.id, l.key, l.value FROM system_info s, docker_container_labels l UNION ALL SELECT s.hostname, 'docker_env', e.id, e.key, e.value FROM system_info s, docker_container_envs e",
+          "uuid": "{{$this.uuid}}"
+        }
+      }
+    },
+    {
+      "ref": "per-node-nginx-server-name-via-a",
+      "kind": "plugin",
+      "title": "Per node: nginx server_name via augeas",
+      "key": "augeas",
+      "scope": "$.inventory.http_targets[*]",
+      "position": {
+        "x": 1940,
+        "y": 263
+      },
+      "data": {
+        "body": {
+          "sql": "SELECT s.hostname AS node_hostname, a.path AS ref, a.label AS label, a.value AS value, a.node AS aug_node FROM system_info s, augeas a WHERE a.path = '/etc/nginx/nginx.conf'",
+          "uuid": "{{$this.uuid}}",
+          "env": "default"
+        },
+        "action": "osquery.query"
+      }
+    },
+    {
+      "ref": "per-node-tls-cert-cn-sans",
+      "kind": "plugin",
+      "title": "Per node: TLS cert CN + SANs",
+      "key": "tls_names",
+      "scope": "$.inventory.http_targets[*]",
+      "position": {
+        "x": 1940,
+        "y": 406
+      },
+      "data": {
+        "action": "osquery.query",
+        "body": {
+          "uuid": "{{$this.uuid}}",
+          "env": "default",
+          "sql": "SELECT s.hostname AS node_hostname, c.hostname AS probe, c.common_name AS common_name, c.subject_alternative_names AS sans, c.issuer_common_name AS issuer FROM system_info s, curl_certificate c WHERE c.hostname = '{{$this.tls_target}}'"
+        }
+      }
+    },
+    {
+      "ref": "per-node-os-etc-hosts-names",
+      "kind": "plugin",
+      "title": "Per node: OS + /etc/hosts names",
+      "key": "host_names",
+      "scope": "$.inventory.http_targets[*]",
+      "position": {
+        "x": 1940,
+        "y": 549
+      },
+      "data": {
+        "action": "osquery.query",
+        "body": {
+          "env": "default",
+          "sql": "SELECT s.hostname AS node_hostname, s.uuid AS node_uuid, 'system' AS source, o.name AS name, o.version AS value FROM system_info s, os_version o UNION ALL SELECT s.hostname, s.uuid, 'etc_hosts', h.address, h.hostnames FROM system_info s, etc_hosts h",
+          "uuid": "{{$this.uuid}}"
+        }
+      }
+    },
+    {
+      "ref": "wait-for-all-hostname-sources",
+      "kind": "promissall",
+      "title": "Wait for all hostname sources",
+      "position": {
+        "x": 2304,
+        "y": 335
+      }
+    },
+    {
+      "ref": "assemble-audit-report",
+      "kind": "js",
+      "title": "Assemble audit report",
+      "key": "report",
+      "position": {
+        "x": 2668,
+        "y": 335
+      },
+      "data": {
+        "logic_rule": "let ctx = input;\nlet inv = ctx.inventory || { nodes: [], http_targets: [] };\nlet rowsOf = function (res) {\n  let out = [];\n  let visit = function (v, node) {\n    if (v === null || v === undefined) { return; }\n    if (Array.isArray(v)) { for (let i = 0; i < v.length; i++) { visit(v[i], node); } return; }\n    if (typeof v !== 'object') { return; }\n    let n = v.uuid || v.node_uuid || node;\n    if (v.data && typeof v.data === 'object' && Array.isArray(v.data.result)) { visit(v.data.result, n); return; }\n    if (Array.isArray(v.result)) { visit(v.result, n); return; }\n    if (Array.isArray(v.rows)) { visit(v.rows, n); return; }\n    if (Array.isArray(v.results)) { visit(v.results, n); return; }\n    if (Array.isArray(v.items)) { visit(v.items, n); return; }\n    let copy = {};\n    for (let k in v) { copy[k] = v[k]; }\n    out.push(copy);\n  };\n  visit(res, '');\n  return out;\n};\nlet bagAdd = function (bag, raw, source) {\n  let v = (raw === null || raw === undefined) ? '' : ('' + raw);\n  let parts = v.split(/[\\s,;]+/);\n  for (let i = 0; i < parts.length; i++) {\n    let p = parts[i].replace(/[`'()*]/g, '').replace(/^\\./, '').trim().toLowerCase();\n    if (!p) { continue; }\n    if (p === '_' || p === 'localhost' || p === 'localhost.localdomain') { continue; }\n    if (p.indexOf('/') >= 0 || p.indexOf(':') >= 0) { continue; }\n    if (p.indexOf('.') < 0 && p.length < 4) { continue; }\n    if (!bag[p]) { bag[p] = []; }\n    if (bag[p].indexOf(source) < 0) { bag[p].push(source); }\n  }\n};\nlet byKey = {};\nlet allNodes = inv.nodes || [];\nfor (let i = 0; i < allNodes.length; i++) { byKey[allNodes[i].key] = allNodes[i]; }\nlet out = [];\nlet targets = inv.http_targets || [];\nfor (let i = 0; i < targets.length; i++) {\n  let t = targets[i];\n  let n = byKey[t.node_key] || { hostname: t.hostname, uuid: t.uuid, likely_http_servers: [], docker_web: [], nginx_host: [], nginx_docker: [], nginx_where: t.nginx_where, has_nginx: false, nginx_host_count: 0, other_web_processes: [] };\n  let bag = {};\n  bagAdd(bag, n.hostname || t.hostname, 'node_hostname');\n  let os = '';\n  let configFiles = [];\n  let aug = rowsOf(t.augeas);\n  for (let a = 0; a < aug.length; a++) { let r = aug[a]; if ((('' + (r.label || '')).toLowerCase()).indexOf('server_name') >= 0) { bagAdd(bag, r.value, 'nginx_server_name'); } }\n  let meta = rowsOf(t.nginx_conf);\n  for (let a = 0; a < meta.length; a++) {\n    let r = meta[a];\n    let src = '' + (r.source || '');\n    let key = ('' + (r.label || '')).toLowerCase();\n    let val = '' + (r.value || '');\n    if (src === 'file') { configFiles.push(val); }\n    if (src === 'docker_env' && (key.indexOf('virtual_host') >= 0 || key.indexOf('letsencrypt_host') >= 0 || key.indexOf('server_name') >= 0 || key.indexOf('domain') >= 0 || key.indexOf('hostname') >= 0)) { bagAdd(bag, val, 'docker_env'); }\n    if (src === 'docker_label' && val.indexOf('Host(') >= 0) { let seg = val.split('Host('); for (let z = 1; z < seg.length; z++) { bagAdd(bag, seg[z].split(')')[0], 'traefik_label'); } }\n    if (src === 'docker_label' && (key.indexOf('virtual.host') >= 0 || key.indexOf('domain') >= 0)) { bagAdd(bag, val, 'docker_label'); }\n  }\n  let certs = rowsOf(t.tls_names);\n  for (let a = 0; a < certs.length; a++) { bagAdd(bag, certs[a].common_name, 'tls_common_name'); bagAdd(bag, certs[a].sans, 'tls_san'); }\n  let ids = rowsOf(t.host_names);\n  for (let a = 0; a < ids.length; a++) {\n    let r = ids[a];\n    let src = '' + (r.source || '');\n    if (src === 'etc_hosts') { bagAdd(bag, r.value, 'etc_hosts'); }\n    if (src === 'system') { os = ('' + (r.name || '')) + ' ' + ('' + (r.value || '')); }\n  }\n  let names = [];\n  for (let h in bag) { names.push({ name: h, sources: bag[h] }); }\n  let rec = { uuid: n.uuid || t.uuid, hostname: n.hostname || t.hostname, os: os, has_nginx: n.has_nginx === true, nginx_where: n.nginx_where || t.nginx_where, nginx_host_process_count: n.nginx_host_count || 0, nginx_host_processes: n.nginx_host || [], nginx_containers: n.nginx_docker || [], other_web_processes: n.other_web_processes || [], http_listeners: n.likely_http_servers || [], docker_web_containers: n.docker_web || [], nginx_config_files: configFiles, hostnames_served: names };\n  rec.summary = rec.hostname + ' | nginx: ' + rec.nginx_where + ' | http listeners: ' + rec.http_listeners.length + ' | web containers: ' + rec.docker_web_containers.length + ' | hostnames: ' + names.length;\n  rec.data_json = JSON.stringify({ uuid: rec.uuid, hostname: rec.hostname, os: rec.os, nginx_where: rec.nginx_where, nginx_processes: rec.nginx_host_process_count, listeners: rec.http_listeners, containers: rec.docker_web_containers, other_web_processes: rec.other_web_processes, config_files: rec.nginx_config_files, hostnames: names });\n  out.push(rec);\n}\nlet withNginx = 0;\nfor (let i = 0; i < out.length; i++) { if (out[i].has_nginx) { withNginx = withNginx + 1; } }\nlet report = { counts: { linux_nodes_seen: (inv.counts ? inv.counts.nodes : 0), nodes_with_http: out.length, nodes_with_nginx: withNginx }, nodes: out };\nreport\n"
+      }
+    },
+    {
+      "ref": "record-one-stage-row-per-node",
+      "kind": "plugin",
+      "title": "Record one stage row per node",
+      "scope": "$.report.nodes[*]",
+      "position": {
+        "x": 3032,
+        "y": 335
+      },
+      "data": {
+        "action": "db.stages.upsert",
+        "body": {
+          "tags": [
+            "linux",
+            "http-audit",
+            "nginx"
+          ],
+          "title": "HTTP/nginx audit — {{$this.hostname}}",
+          "data": "{{$this.data_json}}",
+          "disposition": "{{$this.nginx_where}}",
+          "source": "venapce-osquery",
+          "summary": "{{$this.summary}}"
+        }
+      }
+    },
+    {
+      "ref": "nothing-found-note-it",
+      "kind": "js",
+      "title": "Nothing found — note it",
+      "key": "no_http_summary",
+      "position": {
+        "x": 1940,
+        "y": 692
+      },
+      "data": {
+        "logic_rule": "let inv = input.inventory || {};\nlet counts = inv.counts || {};\nlet summary = { message: 'No HTTP listener, web container or web-server process found on any Linux node that answered.', linux_nodes_seen: counts.nodes || 0 };\nsummary\n"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "from": "start-linux-http-nginx-audit",
+      "to": "fleet-tcp-listeners-owning-proce"
+    },
+    {
+      "from": "start-linux-http-nginx-audit",
+      "to": "fleet-web-server-processes-on-ho"
+    },
+    {
+      "from": "start-linux-http-nginx-audit",
+      "to": "fleet-docker-containers-publishe"
+    },
+    {
+      "from": "fleet-tcp-listeners-owning-proce",
+      "to": "wait-for-all-three-sweeps"
+    },
+    {
+      "from": "fleet-web-server-processes-on-ho",
+      "to": "wait-for-all-three-sweeps"
+    },
+    {
+      "from": "fleet-docker-containers-publishe",
+      "to": "wait-for-all-three-sweeps"
+    },
+    {
+      "from": "wait-for-all-three-sweeps",
+      "to": "build-per-node-inventory"
+    },
+    {
+      "from": "build-per-node-inventory",
+      "to": "any-node-serving-http"
+    },
+    {
+      "from": "any-node-serving-http",
+      "to": "per-node-nginx-config-files-dock",
+      "port": "with_http"
+    },
+    {
+      "from": "any-node-serving-http",
+      "to": "per-node-nginx-server-name-via-a",
+      "port": "with_http"
+    },
+    {
+      "from": "any-node-serving-http",
+      "to": "per-node-tls-cert-cn-sans",
+      "port": "with_http"
+    },
+    {
+      "from": "any-node-serving-http",
+      "to": "per-node-os-etc-hosts-names",
+      "port": "with_http"
+    },
+    {
+      "from": "any-node-serving-http",
+      "to": "nothing-found-note-it",
+      "port": "no_http"
+    },
+    {
+      "from": "per-node-nginx-config-files-dock",
+      "to": "wait-for-all-hostname-sources"
+    },
+    {
+      "from": "per-node-nginx-server-name-via-a",
+      "to": "wait-for-all-hostname-sources"
+    },
+    {
+      "from": "per-node-tls-cert-cn-sans",
+      "to": "wait-for-all-hostname-sources"
+    },
+    {
+      "from": "per-node-os-etc-hosts-names",
+      "to": "wait-for-all-hostname-sources"
+    },
+    {
+      "from": "wait-for-all-hostname-sources",
+      "to": "assemble-audit-report"
+    },
+    {
+      "from": "assemble-audit-report",
+      "to": "record-one-stage-row-per-node"
+    }
+  ]
+}
