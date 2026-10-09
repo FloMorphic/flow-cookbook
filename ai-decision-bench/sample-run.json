@@ -1,0 +1,249 @@
+{
+  "_note": "Context left behind by run #674 of this flow (8 cases x 3 reps = 24 decisions, 65s wall clock) against Ollama `nimble` over the systemone protocol. Trimmed to the report plus one representative decision and result row.",
+  "reps": 3,
+  "report": {
+    "category_accuracy_all_reps": 1,
+    "distinct_cases": 8,
+    "exceptions": 0,
+    "needs_human_distinct_answers": [
+      "yes"
+    ],
+    "routing_mismatches": 1,
+    "rows": 24,
+    "stability": [
+      {
+        "all_reps_correct": true,
+        "base": "t1_billing_clear",
+        "category": [
+          "billing"
+        ],
+        "category_stable": true,
+        "conf_max": 0.9513055190712492,
+        "conf_min": 0.930397213759051,
+        "expect": "billing",
+        "needs_human": [
+          "yes"
+        ],
+        "reps": 3,
+        "urgency": [
+          "normal"
+        ],
+        "urgency_stable": true
+      },
+      {
+        "all_reps_correct": true,
+        "base": "t2_technical_clear",
+        "category": [
+          "technical"
+        ],
+        "category_stable": true,
+        "conf_max": 0.9343286656883916,
+        "conf_min": 0.8680206965347624,
+        "expect": "technical",
+        "needs_human": [
+          "yes"
+        ],
+        "reps": 3,
+        "urgency": [
+          "high"
+        ],
+        "urgency_stable": true
+      },
+      {
+        "all_reps_correct": true,
+        "base": "t3_access_clear",
+        "category": [
+          "account_access"
+        ],
+        "category_stable": true,
+        "conf_max": 0.9856809784529594,
+        "conf_min": 0.9794976204482028,
+        "expect": "account_access",
+        "needs_human": [
+          "yes"
+        ],
+        "reps": 3,
+        "urgency": [
+          "high"
+        ],
+        "urgency_stable": true
+      },
+      {
+        "all_reps_correct": true,
+        "base": "t4_out_of_scope",
+        "category": [
+          "other"
+        ],
+        "category_stable": true,
+        "conf_max": 0.9855933282395553,
+        "conf_min": 0.9724987323619948,
+        "expect": "other",
+        "needs_human": [
+          "yes"
+        ],
+        "reps": 3,
+        "urgency": [
+          "low"
+        ],
+        "urgency_stable": true
+      },
+      {
+        "all_reps_correct": true,
+        "base": "t5_ambiguous",
+        "category": [
+          "account_access"
+        ],
+        "category_stable": true,
+        "conf_max": 0.4980803721326853,
+        "conf_min": 0.4153116859176065,
+        "expect": "ambiguous",
+        "needs_human": [
+          "yes"
+        ],
+        "reps": 3,
+        "urgency": [
+          "high"
+        ],
+        "urgency_stable": true
+      },
+      {
+        "all_reps_correct": true,
+        "base": "t6_critical",
+        "category": [
+          "technical"
+        ],
+        "category_stable": true,
+        "conf_max": 0.9793281115526984,
+        "conf_min": 0.9067556895863668,
+        "expect": "technical",
+        "needs_human": [
+          "yes"
+        ],
+        "reps": 3,
+        "urgency": [
+          "critical"
+        ],
+        "urgency_stable": true
+      },
+      {
+        "all_reps_correct": true,
+        "base": "t7_angry_but_routine",
+        "category": [
+          "billing"
+        ],
+        "category_stable": true,
+        "conf_max": 0.9695322782702062,
+        "conf_min": 0.9347820490540384,
+        "expect": "billing",
+        "needs_human": [
+          "yes"
+        ],
+        "reps": 3,
+        "urgency": [
+          "normal"
+        ],
+        "urgency_stable": true
+      },
+      {
+        "all_reps_correct": true,
+        "base": "t8_misleading_vocab",
+        "category": [
+          "technical"
+        ],
+        "category_stable": true,
+        "conf_max": 0.9413469142107768,
+        "conf_min": 0.920480409219004,
+        "expect": "technical",
+        "needs_human": [
+          "yes"
+        ],
+        "reps": 3,
+        "urgency": [
+          "normal",
+          "high"
+        ],
+        "urgency_stable": false
+      }
+    ],
+    "unstable_category": [],
+    "unstable_urgency": [
+      "t8_misleading_vocab"
+    ]
+  },
+  "decision_example": {
+    "answers": {
+      "category": {
+        "answer": "technical",
+        "confidence": 0.920480409219004,
+        "probabilities": {
+          "account_access": 0.0005039873495826627,
+          "billing": 0.015923301819567137,
+          "other": 0.003672694722640268,
+          "technical": 0.9799000161082101
+        },
+        "question": "category",
+        "routed": true,
+        "tag": "category.technical",
+        "type": "choice"
+      },
+      "needs_human": {
+        "answer": "yes",
+        "confidence": 0.8553043724564751,
+        "p": 0.8553043724564751,
+        "probabilities": {
+          "no": 0.14469562754352494,
+          "yes": 0.8553043724564751
+        },
+        "question": "needs_human",
+        "routed": false,
+        "tag": "needs_human.yes",
+        "type": "noul"
+      },
+      "urgency": {
+        "answer": "high",
+        "confidence": 0.3861775266996281,
+        "probabilities": {
+          "critical": 0.0006589845361759232,
+          "high": 0.5207299608863224,
+          "low": 0.04698320767512237,
+          "normal": 0.4316278469023794
+        },
+        "question": "urgency",
+        "routed": false,
+        "score": 1.4750647222835518,
+        "tag": "urgency.high",
+        "type": "score"
+      }
+    },
+    "credits_used": 0,
+    "elapsed_ms": 0,
+    "model": "nimble",
+    "provider": "systemone",
+    "refused": null,
+    "routed": [
+      "category.technical"
+    ],
+    "usage": {
+      "input_tokens": 1778,
+      "output_tokens": 4
+    }
+  },
+  "results_example": {
+    "base": "t1_billing_clear",
+    "category": {
+      "answer": "billing",
+      "confidence": 0.9513055190712492
+    },
+    "expect": "billing",
+    "fired_port": "category.billing",
+    "id": "t1_billing_clear#1",
+    "needs_human": {
+      "answer": "yes",
+      "confidence": 0.9557944458118184
+    },
+    "urgency": {
+      "answer": "normal",
+      "confidence": 0.5139680909051041
+    }
+  }
+}
